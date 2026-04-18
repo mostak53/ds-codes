@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lab Experiments — DSA Code Viewer</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: #1f2e4a;
+    --accent: #00d4ff;
+    --accent2: #7c3aed;
+    --accent3: #10b981;
+    --accent4: #f59e0b;
+    --text: #e2e8f0;
+    --text-muted: #64748b;
+    --text-dim: #94a3b8;
+    --red: #ef4444;
+    --glow: 0 0 20px rgba(0,212,255,0.15);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ─── Background grid ─── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ─── Header ─── */
+  header {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    padding: 60px 20px 40px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(0,212,255,0.05) 0%, transparent 100%);
+  }
+
+  .header-badge {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    background: rgba(0,212,255,0.08);
+    border: 1px solid rgba(0,212,255,0.25);
+    padding: 4px 14px;
+    border-radius: 20px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  header h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 700;
+    letter-spacing: -1px;
+    background: linear-gradient(135deg, #fff 30%, var(--accent) 70%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 12px;
+  }
+
+  header p {
+    color: var(--text-muted);
+    font-size: 15px;
+    max-width: 500px;
+    margin: 0 auto;
+    font-weight: 300;
+  }
+
+  /* ─── Main layout ─── */
+  .container {
+    position: relative;
+    z-index: 10;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 20px 80px;
+  }
+
+  /* ─── Section label ─── */
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    padding-left: 4px;
+  }
+
+  /* ─── Experiment Cards ─── */
+  .exp-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    margin-bottom: 16px;
+    overflow: hidden;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+
+  .exp-card:hover {
+    border-color: rgba(0,212,255,0.3);
+    box-shadow: var(--glow);
+  }
+
+  /* ─── Card Header / Toggle Button ─── */
+  .exp-toggle {
+    width: 100%;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 22px 28px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    text-align: left;
+    transition: background 0.2s;
+  }
+
+  .exp-toggle:hover { background: rgba(255,255,255,0.02); }
+
+  .exp-num {
+    flex-shrink: 0;
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .num-8  { background: rgba(0,212,255,0.12); color: var(--accent); border: 1px solid rgba(0,212,255,0.25); }
+  .num-9  { background: rgba(124,58,237,0.12); color: #a78bfa; border: 1px solid rgba(124,58,237,0.25); }
+  .num-10 { background: rgba(16,185,129,0.12); color: var(--accent3); border: 1px solid rgba(16,185,129,0.25); }
+  .num-opt { background: rgba(245,158,11,0.12); color: var(--accent4); border: 1px solid rgba(245,158,11,0.25); }
+  .num-all { background: rgba(239,68,68,0.08); color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
+
+  .exp-info { flex: 1; }
+
+  .exp-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .exp-subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 300;
+  }
+
+  .exp-arrow {
+    flex-shrink: 0;
+    color: var(--text-muted);
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s;
+    font-size: 18px;
+  }
+
+  .exp-card.open .exp-arrow {
+    transform: rotate(180deg);
+    color: var(--accent);
+  }
+
+  /* ─── Sub-tabs (for exp 10) ─── */
+  .sub-tabs {
+    display: flex;
+    gap: 8px;
+    padding: 0 28px 20px;
+  }
+
+  .sub-tab {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 6px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+  }
+
+  .sub-tab:hover { border-color: var(--accent3); color: var(--accent3); }
+  .sub-tab.active { background: rgba(16,185,129,0.12); border-color: var(--accent3); color: var(--accent3); }
+
+  /* ─── Code Panel ─── */
+  .code-panel {
+    display: none;
+    border-top: 1px solid var(--border);
+  }
+
+  .exp-card.open .code-panel { display: block; }
+
+  .code-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .code-lang {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .copy-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 5px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+  }
+
+  .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .copy-btn.copied { border-color: var(--accent3); color: var(--accent3); }
+
+  pre {
+    padding: 28px;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13.5px;
+    line-height: 1.7;
+    color: #cdd6f4;
+    background: #0d1117;
+  }
+
+  /* Syntax highlighting */
+  .kw  { color: #c792ea; }  /* keywords */
+  .ty  { color: #82aaff; }  /* types */
+  .fn  { color: #82aaff; }  /* functions */
+  .num-lit { color: #f78c6c; } /* numbers */
+  .str { color: #c3e88d; }  /* strings */
+  .cmt { color: #546e7a; font-style: italic; } /* comments */
+  .pp  { color: #89ddff; }  /* preprocessor */
+  .op  { color: #89ddff; }  /* operators */
+  .var { color: #eeffff; }
+
+  /* ─── Divider ─── */
+  .section-divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 36px 0 20px;
+  }
+
+  .section-divider::before,
+  .section-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .section-divider span {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  /* ─── Scrollbar ─── */
+  pre::-webkit-scrollbar { height: 4px; }
+  pre::-webkit-scrollbar-track { background: transparent; }
+  pre::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  pre::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+  /* ─── Footer ─── */
+  footer {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    padding: 24px;
+    border-top: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+  }
+
+  @media (max-width: 600px) {
+    .exp-toggle { padding: 18px 18px; }
+    pre { padding: 18px; font-size: 12px; }
+    .sub-tabs { flex-wrap: wrap; padding: 0 18px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-badge">DSA Lab · C Programming</div>
+  <h1>Lab Experiments</h1>
+  <p>Binary Search Tree · Heap · Graph Traversals — Click any experiment to view its code</p>
+</header>
+
+<div class="container">
+
+  <div class="section-label">Experiments</div>
+
+  <!-- ══════════════════════════════════════════
+       EXPERIMENT 8
+  ═══════════════════════════════════════════ -->
+  <div class="exp-card" id="card-8">
+    <button class="exp-toggle" onclick="toggle('card-8')">
+      <div class="exp-num num-8">08</div>
+      <div class="exp-info">
+        <div class="exp-title">Binary Search Tree</div>
+        <div class="exp-subtitle">Create a BST with given data — Insert &amp; Search</div>
+      </div>
+      <span class="exp-arrow">▾</span>
+    </button>
+    <div class="code-panel">
+      <div class="code-toolbar">
+        <span class="code-lang">C Language</span>
+        <button class="copy-btn" onclick="copyCode('code-8', this)">Copy</button>
+      </div>
+      <pre id="code-8"><span class="pp">#include &lt;stdio.h&gt;</span>
+<span class="pp">#include &lt;stdlib.h&gt;</span>
+
+<span class="kw">struct</span> <span class="ty">Node</span> {
+    <span class="ty">int</span> data;
+    <span class="kw">struct</span> <span class="ty">Node</span> <span class="op">*</span>left, <span class="op">*</span>right;
+};
+
+<span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> <span class="fn">newNode</span>(<span class="ty">int</span> item) {
+    <span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> temp <span class="op">=</span> (<span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span>)<span class="fn">malloc</span>(<span class="kw">sizeof</span>(<span class="kw">struct</span> <span class="ty">Node</span>));
+    temp<span class="op">-&gt;</span>data <span class="op">=</span> item;
+    temp<span class="op">-&gt;</span>left <span class="op">=</span> temp<span class="op">-&gt;</span>right <span class="op">=</span> NULL;
+    <span class="kw">return</span> temp;
+}
+
+<span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> <span class="fn">insert</span>(<span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> node, <span class="ty">int</span> data) {
+    <span class="kw">if</span> (node <span class="op">==</span> NULL) <span class="kw">return</span> <span class="fn">newNode</span>(data);
+    <span class="kw">if</span> (data <span class="op">&lt;</span> node<span class="op">-&gt;</span>data)
+        node<span class="op">-&gt;</span>left  <span class="op">=</span> <span class="fn">insert</span>(node<span class="op">-&gt;</span>left,  data);
+    <span class="kw">else if</span> (data <span class="op">&gt;</span> node<span class="op">-&gt;</span>data)
+        node<span class="op">-&gt;</span>right <span class="op">=</span> <span class="fn">insert</span>(node<span class="op">-&gt;</span>right, data);
+    <span class="kw">return</span> node;
+}
+
+<span class="kw">void</span> <span class="fn">inorder</span>(<span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> root) {
+    <span class="kw">if</span> (root <span class="op">!=</span> NULL) {
+        <span class="fn">inorder</span>(root<span class="op">-&gt;</span>left);
+        <span class="fn">printf</span>(<span class="str">"%d "</span>, root<span class="op">-&gt;</span>data);
+        <span class="fn">inorder</span>(root<span class="op">-&gt;</span>right);
+    }
+}
+
+<span class="ty">int</span> <span class="fn">main</span>() {
+    <span class="ty">int</span> data[] <span class="op">=</span> {<span class="num-lit">10</span>, <span class="num-lit">16</span>, <span class="num-lit">4</span>, <span class="num-lit">25</span>, <span class="num-lit">54</span>, <span class="num-lit">12</span>, <span class="num-lit">8</span>, <span class="num-lit">3</span>, <span class="num-lit">20</span>, <span class="num-lit">32</span>};
+    <span class="ty">int</span> n <span class="op">=</span> <span class="kw">sizeof</span>(data) <span class="op">/</span> <span class="kw">sizeof</span>(data[<span class="num-lit">0</span>]);
+    <span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> root <span class="op">=</span> NULL;
+
+    root <span class="op">=</span> <span class="fn">insert</span>(root, data[<span class="num-lit">0</span>]);
+    <span class="kw">for</span> (<span class="ty">int</span> i <span class="op">=</span> <span class="num-lit">1</span>; i <span class="op">&lt;</span> n; i++) {
+        <span class="fn">insert</span>(root, data[i]);
+    }
+
+    <span class="fn">printf</span>(<span class="str">"BST In-order Traversal: "</span>);
+    <span class="fn">inorder</span>(root);
+    <span class="fn">printf</span>(<span class="str">"\n"</span>);
+
+    <span class="kw">return</span> <span class="num-lit">0</span>;
+}</pre>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       EXPERIMENT 9
+  ═══════════════════════════════════════════ -->
+  <div class="exp-card" id="card-9">
+    <button class="exp-toggle" onclick="toggle('card-9')">
+      <div class="exp-num num-9">09</div>
+      <div class="exp-info">
+        <div class="exp-title">Max Heap &amp; Min Heap</div>
+        <div class="exp-subtitle">Convert BST to Max Heap and Min Heap</div>
+      </div>
+      <span class="exp-arrow">▾</span>
+    </button>
+    <div class="code-panel">
+      <div class="code-toolbar">
+        <span class="code-lang">C Language</span>
+        <button class="copy-btn" onclick="copyCode('code-9', this)">Copy</button>
+      </div>
+      <pre id="code-9"><span class="pp">#include &lt;stdio.h&gt;</span>
+<span class="pp">#include &lt;stdlib.h&gt;</span>
+
+<span class="kw">struct</span> <span class="ty">Node</span> {
+    <span class="ty">int</span> data;
+    <span class="kw">struct</span> <span class="ty">Node</span> <span class="op">*</span>left, <span class="op">*</span>right;
+};
+
+<span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> <span class="fn">newNode</span>(<span class="ty">int</span> data) {
+    <span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> node <span class="op">=</span> (<span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span>)<span class="fn">malloc</span>(<span class="kw">sizeof</span>(<span class="kw">struct</span> <span class="ty">Node</span>));
+    node<span class="op">-&gt;</span>data  <span class="op">=</span> data;
+    node<span class="op">-&gt;</span>left <span class="op">=</span> node<span class="op">-&gt;</span>right <span class="op">=</span> NULL;
+    <span class="kw">return</span> node;
+}
+
+<span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> <span class="fn">insert</span>(<span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> root, <span class="ty">int</span> data) {
+    <span class="kw">if</span> (root <span class="op">==</span> NULL) <span class="kw">return</span> <span class="fn">newNode</span>(data);
+    <span class="kw">if</span> (data <span class="op">&lt;</span> root<span class="op">-&gt;</span>data)
+        root<span class="op">-&gt;</span>left  <span class="op">=</span> <span class="fn">insert</span>(root<span class="op">-&gt;</span>left,  data);
+    <span class="kw">else</span>
+        root<span class="op">-&gt;</span>right <span class="op">=</span> <span class="fn">insert</span>(root<span class="op">-&gt;</span>right, data);
+    <span class="kw">return</span> root;
+}
+
+<span class="kw">void</span> <span class="fn">inorder</span>(<span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> root, <span class="ty">int</span> arr[], <span class="ty">int</span> <span class="op">*</span>index) {
+    <span class="kw">if</span> (root <span class="op">==</span> NULL) <span class="kw">return</span>;
+    <span class="fn">inorder</span>(root<span class="op">-&gt;</span>left, arr, index);
+    arr[(<span class="op">*</span>index)<span class="op">++</span>] <span class="op">=</span> root<span class="op">-&gt;</span>data;
+    <span class="fn">inorder</span>(root<span class="op">-&gt;</span>right, arr, index);
+}
+
+<span class="kw">void</span> <span class="fn">bstToMaxHeap</span>(<span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> root, <span class="ty">int</span> arr[], <span class="ty">int</span> <span class="op">*</span>index) {
+    <span class="kw">if</span> (root <span class="op">==</span> NULL) <span class="kw">return</span>;
+    <span class="fn">bstToMaxHeap</span>(root<span class="op">-&gt;</span>left,  arr, index);
+    <span class="fn">bstToMaxHeap</span>(root<span class="op">-&gt;</span>right, arr, index);
+    root<span class="op">-&gt;</span>data <span class="op">=</span> arr[(<span class="op">*</span>index)<span class="op">--</span>]; <span class="cmt">// Fill in reverse inorder</span>
+}
+
+<span class="kw">void</span> <span class="fn">bstToMinHeap</span>(<span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> root, <span class="ty">int</span> arr[], <span class="ty">int</span> <span class="op">*</span>index) {
+    <span class="kw">if</span> (root <span class="op">==</span> NULL) <span class="kw">return</span>;
+    root<span class="op">-&gt;</span>data <span class="op">=</span> arr[(<span class="op">*</span>index)<span class="op">++</span>]; <span class="cmt">// Fill in inorder</span>
+    <span class="fn">bstToMinHeap</span>(root<span class="op">-&gt;</span>left,  arr, index);
+    <span class="fn">bstToMinHeap</span>(root<span class="op">-&gt;</span>right, arr, index);
+}
+
+<span class="kw">void</span> <span class="fn">preorder</span>(<span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> root) {
+    <span class="kw">if</span> (root <span class="op">==</span> NULL) <span class="kw">return</span>;
+    <span class="fn">printf</span>(<span class="str">"%d "</span>, root<span class="op">-&gt;</span>data);
+    <span class="fn">preorder</span>(root<span class="op">-&gt;</span>left);
+    <span class="fn">preorder</span>(root<span class="op">-&gt;</span>right);
+}
+
+<span class="ty">int</span> <span class="fn">main</span>() {
+    <span class="ty">int</span> data[] <span class="op">=</span> {<span class="num-lit">10</span>, <span class="num-lit">16</span>, <span class="num-lit">4</span>, <span class="num-lit">25</span>, <span class="num-lit">54</span>, <span class="num-lit">12</span>, <span class="num-lit">8</span>, <span class="num-lit">3</span>, <span class="num-lit">20</span>, <span class="num-lit">32</span>};
+    <span class="ty">int</span> n <span class="op">=</span> <span class="kw">sizeof</span>(data) <span class="op">/</span> <span class="kw">sizeof</span>(data[<span class="num-lit">0</span>]);
+
+    <span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> root <span class="op">=</span> NULL;
+    <span class="kw">for</span> (<span class="ty">int</span> i <span class="op">=</span> <span class="num-lit">0</span>; i <span class="op">&lt;</span> n; i++)
+        root <span class="op">=</span> <span class="fn">insert</span>(root, data[i]);
+
+    <span class="ty">int</span> arr[<span class="num-lit">100</span>], index <span class="op">=</span> <span class="num-lit">0</span>;
+    <span class="fn">inorder</span>(root, arr, <span class="op">&amp;</span>index);
+
+    <span class="cmt">// Max Heap</span>
+    <span class="ty">int</span> idx <span class="op">=</span> index <span class="op">-</span> <span class="num-lit">1</span>;
+    <span class="fn">bstToMaxHeap</span>(root, arr, <span class="op">&amp;</span>idx);
+    <span class="fn">printf</span>(<span class="str">"Max Heap (Preorder): "</span>);
+    <span class="fn">preorder</span>(root);
+    <span class="fn">printf</span>(<span class="str">"\n"</span>);
+
+    <span class="cmt">// Min Heap</span>
+    idx <span class="op">=</span> <span class="num-lit">0</span>;
+    <span class="fn">bstToMinHeap</span>(root, arr, <span class="op">&amp;</span>idx);
+    <span class="fn">printf</span>(<span class="str">"Min Heap (Preorder): "</span>);
+    <span class="fn">preorder</span>(root);
+    <span class="fn">printf</span>(<span class="str">"\n"</span>);
+
+    <span class="kw">return</span> <span class="num-lit">0</span>;
+}</pre>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       EXPERIMENT 10 (with sub-tabs)
+  ═══════════════════════════════════════════ -->
+  <div class="exp-card" id="card-10">
+    <button class="exp-toggle" onclick="toggle('card-10')">
+      <div class="exp-num num-10">10</div>
+      <div class="exp-info">
+        <div class="exp-title">Graph Traversals</div>
+        <div class="exp-subtitle">BFS · DFS · Topological Sorting</div>
+      </div>
+      <span class="exp-arrow">▾</span>
+    </button>
+    <div class="code-panel">
+      <div class="sub-tabs">
+        <button class="sub-tab active" onclick="switchTab('bfs')">BFS</button>
+        <button class="sub-tab" onclick="switchTab('dfs')">DFS</button>
+        <button class="sub-tab" onclick="switchTab('topo')">Topological Sort</button>
+      </div>
+
+      <!-- BFS -->
+      <div id="panel-bfs">
+        <div class="code-toolbar">
+          <span class="code-lang">C Language — BFS</span>
+          <button class="copy-btn" onclick="copyCode('code-bfs', this)">Copy</button>
+        </div>
+        <pre id="code-bfs"><span class="pp">#include &lt;stdio.h&gt;</span>
+<span class="pp">#include &lt;stdlib.h&gt;</span>
+<span class="pp">#define MAX 8</span>
+
+<span class="ty">int</span> adj[MAX][MAX] <span class="op">=</span> {
+    <span class="cmt">//A B C D E F G H</span>
+    {<span class="num-lit">0</span>,<span class="num-lit">1</span>,<span class="num-lit">1</span>,<span class="num-lit">1</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>}, <span class="cmt">// A</span>
+    {<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">1</span>,<span class="num-lit">0</span>,<span class="num-lit">1</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>}, <span class="cmt">// B</span>
+    {<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">1</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>}, <span class="cmt">// C</span>
+    {<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">1</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">1</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>}, <span class="cmt">// D</span>
+    {<span class="num-lit">1</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>}, <span class="cmt">// E</span>
+    {<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">1</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>}, <span class="cmt">// F</span>
+    {<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">1</span>,<span class="num-lit">0</span>,<span class="num-lit">1</span>,<span class="num-lit">0</span>,<span class="num-lit">1</span>}, <span class="cmt">// G</span>
+    {<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">1</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>}  <span class="cmt">// H</span>
+};
+
+<span class="ty">int</span> visited[MAX] <span class="op">=</span> {<span class="num-lit">0</span>};
+
+<span class="kw">void</span> <span class="fn">bfs</span>(<span class="ty">int</span> start) {
+    <span class="ty">int</span> queue[MAX], front <span class="op">=</span> <span class="num-lit">0</span>, rear <span class="op">=</span> <span class="num-lit">0</span>;
+    queue[rear<span class="op">++</span>] <span class="op">=</span> start;
+    visited[start] <span class="op">=</span> <span class="num-lit">1</span>;
+
+    <span class="kw">while</span> (front <span class="op">&lt;</span> rear) {
+        <span class="ty">int</span> node <span class="op">=</span> queue[front<span class="op">++</span>];
+        <span class="fn">printf</span>(<span class="str">"%c "</span>, node <span class="op">+</span> <span class="str">'A'</span>);
+        <span class="kw">for</span> (<span class="ty">int</span> i <span class="op">=</span> <span class="num-lit">0</span>; i <span class="op">&lt;</span> MAX; i++) {
+            <span class="kw">if</span> (adj[node][i] <span class="op">&amp;&amp;</span> <span class="op">!</span>visited[i]) {
+                queue[rear<span class="op">++</span>] <span class="op">=</span> i;
+                visited[i] <span class="op">=</span> <span class="num-lit">1</span>;
+            }
+        }
+    }
+}
+
+<span class="ty">int</span> <span class="fn">main</span>() {
+    <span class="fn">bfs</span>(<span class="num-lit">0</span>);
+    <span class="fn">printf</span>(<span class="str">"\n"</span>);
+    <span class="kw">return</span> <span class="num-lit">0</span>;
+}</pre>
+      </div>
+
+      <!-- DFS -->
+      <div id="panel-dfs" style="display:none;">
+        <div class="code-toolbar">
+          <span class="code-lang">C Language — DFS</span>
+          <button class="copy-btn" onclick="copyCode('code-dfs', this)">Copy</button>
+        </div>
+        <pre id="code-dfs"><span class="pp">#include &lt;stdio.h&gt;</span>
+<span class="pp">#define MAX 8</span>
+
+<span class="ty">int</span> adj[MAX][MAX] <span class="op">=</span> {
+    {<span class="num-lit">0</span>,<span class="num-lit">1</span>,<span class="num-lit">1</span>,<span class="num-lit">1</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>},
+    {<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">1</span>,<span class="num-lit">0</span>,<span class="num-lit">1</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>},
+    {<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">1</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>},
+    {<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">1</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">1</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>},
+    {<span class="num-lit">1</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>},
+    {<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">1</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>},
+    {<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">1</span>,<span class="num-lit">0</span>,<span class="num-lit">1</span>,<span class="num-lit">0</span>,<span class="num-lit">1</span>},
+    {<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">1</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>}
+};
+
+<span class="ty">int</span> visited[MAX] <span class="op">=</span> {<span class="num-lit">0</span>};
+
+<span class="kw">void</span> <span class="fn">dfs</span>(<span class="ty">int</span> node) {
+    <span class="fn">printf</span>(<span class="str">"%c "</span>, node <span class="op">+</span> <span class="str">'A'</span>);
+    visited[node] <span class="op">=</span> <span class="num-lit">1</span>;
+    <span class="kw">for</span> (<span class="ty">int</span> i <span class="op">=</span> <span class="num-lit">0</span>; i <span class="op">&lt;</span> MAX; i++) {
+        <span class="kw">if</span> (adj[node][i] <span class="op">&amp;&amp;</span> <span class="op">!</span>visited[i])
+            <span class="fn">dfs</span>(i);
+    }
+}
+
+<span class="ty">int</span> <span class="fn">main</span>() {
+    <span class="fn">dfs</span>(<span class="num-lit">0</span>); <span class="cmt">// Start from A</span>
+    <span class="fn">printf</span>(<span class="str">"\n"</span>);
+    <span class="kw">return</span> <span class="num-lit">0</span>;
+}</pre>
+      </div>
+
+      <!-- Topological Sort -->
+      <div id="panel-topo" style="display:none;">
+        <div class="code-toolbar">
+          <span class="code-lang">C Language — Topological Sorting</span>
+          <button class="copy-btn" onclick="copyCode('code-topo', this)">Copy</button>
+        </div>
+        <pre id="code-topo"><span class="pp">#include &lt;stdio.h&gt;</span>
+<span class="pp">#define MAX 8</span>
+
+<span class="ty">int</span> adj[MAX][MAX] <span class="op">=</span> {
+    {<span class="num-lit">0</span>,<span class="num-lit">1</span>,<span class="num-lit">1</span>,<span class="num-lit">1</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>},
+    {<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">1</span>,<span class="num-lit">0</span>,<span class="num-lit">1</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>},
+    {<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">1</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>},
+    {<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">1</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">1</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>},
+    {<span class="num-lit">1</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>},
+    {<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">1</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>},
+    {<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">1</span>,<span class="num-lit">0</span>,<span class="num-lit">1</span>,<span class="num-lit">0</span>,<span class="num-lit">1</span>},
+    {<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">1</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>,<span class="num-lit">0</span>}
+};
+
+<span class="kw">void</span> <span class="fn">topologicalSort</span>() {
+    <span class="ty">int</span> indegree[MAX] <span class="op">=</span> {<span class="num-lit">0</span>};
+    <span class="kw">for</span> (<span class="ty">int</span> i <span class="op">=</span> <span class="num-lit">0</span>; i <span class="op">&lt;</span> MAX; i++)
+        <span class="kw">for</span> (<span class="ty">int</span> j <span class="op">=</span> <span class="num-lit">0</span>; j <span class="op">&lt;</span> MAX; j++)
+            <span class="kw">if</span> (adj[i][j]) indegree[j]<span class="op">++</span>;
+
+    <span class="ty">int</span> visited[MAX] <span class="op">=</span> {<span class="num-lit">0</span>};
+    <span class="kw">for</span> (<span class="ty">int</span> k <span class="op">=</span> <span class="num-lit">0</span>; k <span class="op">&lt;</span> MAX; k++) {
+        <span class="ty">int</span> found <span class="op">=</span> <span class="num-lit">0</span>;
+        <span class="kw">for</span> (<span class="ty">int</span> i <span class="op">=</span> <span class="num-lit">0</span>; i <span class="op">&lt;</span> MAX; i++) {
+            <span class="kw">if</span> (indegree[i] <span class="op">==</span> <span class="num-lit">0</span> <span class="op">&amp;&amp;</span> <span class="op">!</span>visited[i]) {
+                <span class="fn">printf</span>(<span class="str">"%c "</span>, i <span class="op">+</span> <span class="str">'A'</span>);
+                visited[i] <span class="op">=</span> <span class="num-lit">1</span>;
+                <span class="kw">for</span> (<span class="ty">int</span> j <span class="op">=</span> <span class="num-lit">0</span>; j <span class="op">&lt;</span> MAX; j++)
+                    <span class="kw">if</span> (adj[i][j]) indegree[j]<span class="op">--</span>;
+                found <span class="op">=</span> <span class="num-lit">1</span>;
+            }
+        }
+        <span class="kw">if</span> (<span class="op">!</span>found) {
+            <span class="fn">printf</span>(<span class="str">"\nCycle detected! No valid Topological Order.\n"</span>);
+            <span class="kw">return</span>;
+        }
+    }
+}
+
+<span class="ty">int</span> <span class="fn">main</span>() {
+    <span class="fn">topologicalSort</span>();
+    <span class="kw">return</span> <span class="num-lit">0</span>;
+}</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       OPTIONAL (Experiment 9 with Insert/Delete)
+  ═══════════════════════════════════════════ -->
+  <div class="section-divider">
+    <span>Optional / Extra</span>
+  </div>
+
+  <div class="exp-card" id="card-opt">
+    <button class="exp-toggle" onclick="toggle('card-opt')">
+      <div class="exp-num num-opt">★</div>
+      <div class="exp-info">
+        <div class="exp-title">Exp 09 — Optional Code</div>
+        <div class="exp-subtitle">Max &amp; Min Heap with Insert &amp; Delete Function</div>
+      </div>
+      <span class="exp-arrow">▾</span>
+    </button>
+    <div class="code-panel">
+      <div class="code-toolbar">
+        <span class="code-lang">C Language — Optional</span>
+        <button class="copy-btn" onclick="copyCode('code-opt', this)">Copy</button>
+      </div>
+      <pre id="code-opt"><span class="pp">#include &lt;stdio.h&gt;</span>
+<span class="pp">#include &lt;stdlib.h&gt;</span>
+
+<span class="kw">struct</span> <span class="ty">Node</span> {
+    <span class="ty">int</span> data;
+    <span class="kw">struct</span> <span class="ty">Node</span> <span class="op">*</span>left, <span class="op">*</span>right, <span class="op">*</span>parent;
+};
+
+<span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> <span class="fn">createNode</span>(<span class="ty">int</span> val) {
+    <span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> n <span class="op">=</span> (<span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span>)<span class="fn">malloc</span>(<span class="kw">sizeof</span>(<span class="kw">struct</span> <span class="ty">Node</span>));
+    n<span class="op">-&gt;</span>data <span class="op">=</span> val;
+    n<span class="op">-&gt;</span>left <span class="op">=</span> n<span class="op">-&gt;</span>right <span class="op">=</span> n<span class="op">-&gt;</span>parent <span class="op">=</span> NULL;
+    <span class="kw">return</span> n;
+}
+
+<span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> <span class="fn">getInsertPosition</span>(<span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> root) {
+    <span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> queue[<span class="num-lit">100</span>];
+    <span class="ty">int</span> head <span class="op">=</span> <span class="num-lit">0</span>, tail <span class="op">=</span> <span class="num-lit">0</span>;
+    queue[tail<span class="op">++</span>] <span class="op">=</span> root;
+    <span class="kw">while</span> (head <span class="op">&lt;</span> tail) {
+        <span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> curr <span class="op">=</span> queue[head<span class="op">++</span>];
+        <span class="kw">if</span> (<span class="op">!</span>curr<span class="op">-&gt;</span>left <span class="op">||</span> <span class="op">!</span>curr<span class="op">-&gt;</span>right) <span class="kw">return</span> curr;
+        <span class="kw">if</span> (curr<span class="op">-&gt;</span>left)  queue[tail<span class="op">++</span>] <span class="op">=</span> curr<span class="op">-&gt;</span>left;
+        <span class="kw">if</span> (curr<span class="op">-&gt;</span>right) queue[tail<span class="op">++</span>] <span class="op">=</span> curr<span class="op">-&gt;</span>right;
+    }
+    <span class="kw">return</span> NULL;
+}
+
+<span class="kw">void</span> <span class="fn">siftUp</span>(<span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> node, <span class="ty">int</span> isMax) {
+    <span class="kw">if</span> (<span class="op">!</span>node<span class="op">-&gt;</span>parent) <span class="kw">return</span>;
+    <span class="ty">int</span> shouldSwap <span class="op">=</span> isMax
+        <span class="op">?</span> (node<span class="op">-&gt;</span>data <span class="op">&gt;</span> node<span class="op">-&gt;</span>parent<span class="op">-&gt;</span>data)
+        <span class="op">:</span> (node<span class="op">-&gt;</span>data <span class="op">&lt;</span> node<span class="op">-&gt;</span>parent<span class="op">-&gt;</span>data);
+    <span class="kw">if</span> (shouldSwap) {
+        <span class="ty">int</span> tmp <span class="op">=</span> node<span class="op">-&gt;</span>data;
+        node<span class="op">-&gt;</span>data <span class="op">=</span> node<span class="op">-&gt;</span>parent<span class="op">-&gt;</span>data;
+        node<span class="op">-&gt;</span>parent<span class="op">-&gt;</span>data <span class="op">=</span> tmp;
+        <span class="fn">siftUp</span>(node<span class="op">-&gt;</span>parent, isMax);
+    }
+}
+
+<span class="kw">void</span> <span class="fn">heapifyDown</span>(<span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> node, <span class="ty">int</span> isMax) {
+    <span class="kw">if</span> (<span class="op">!</span>node) <span class="kw">return</span>;
+    <span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> extreme <span class="op">=</span> node;
+    <span class="kw">if</span> (node<span class="op">-&gt;</span>left) {
+        <span class="kw">if</span> (isMax  <span class="op">&amp;&amp;</span> node<span class="op">-&gt;</span>left<span class="op">-&gt;</span>data <span class="op">&gt;</span> extreme<span class="op">-&gt;</span>data) extreme <span class="op">=</span> node<span class="op">-&gt;</span>left;
+        <span class="kw">if</span> (<span class="op">!</span>isMax <span class="op">&amp;&amp;</span> node<span class="op">-&gt;</span>left<span class="op">-&gt;</span>data <span class="op">&lt;</span> extreme<span class="op">-&gt;</span>data) extreme <span class="op">=</span> node<span class="op">-&gt;</span>left;
+    }
+    <span class="kw">if</span> (node<span class="op">-&gt;</span>right) {
+        <span class="kw">if</span> (isMax  <span class="op">&amp;&amp;</span> node<span class="op">-&gt;</span>right<span class="op">-&gt;</span>data <span class="op">&gt;</span> extreme<span class="op">-&gt;</span>data) extreme <span class="op">=</span> node<span class="op">-&gt;</span>right;
+        <span class="kw">if</span> (<span class="op">!</span>isMax <span class="op">&amp;&amp;</span> node<span class="op">-&gt;</span>right<span class="op">-&gt;</span>data <span class="op">&lt;</span> extreme<span class="op">-&gt;</span>data) extreme <span class="op">=</span> node<span class="op">-&gt;</span>right;
+    }
+    <span class="kw">if</span> (extreme <span class="op">!=</span> node) {
+        <span class="ty">int</span> tmp <span class="op">=</span> node<span class="op">-&gt;</span>data;
+        node<span class="op">-&gt;</span>data <span class="op">=</span> extreme<span class="op">-&gt;</span>data;
+        extreme<span class="op">-&gt;</span>data <span class="op">=</span> tmp;
+        <span class="fn">heapifyDown</span>(extreme, isMax);
+    }
+}
+
+<span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> <span class="fn">insertHeap</span>(<span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> root, <span class="ty">int</span> val, <span class="ty">int</span> isMax) {
+    <span class="kw">if</span> (<span class="op">!</span>root) <span class="kw">return</span> <span class="fn">createNode</span>(val);
+    <span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> parent <span class="op">=</span> <span class="fn">getInsertPosition</span>(root);
+    <span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> newNode <span class="op">=</span> <span class="fn">createNode</span>(val);
+    newNode<span class="op">-&gt;</span>parent <span class="op">=</span> parent;
+    <span class="kw">if</span> (<span class="op">!</span>parent<span class="op">-&gt;</span>left) parent<span class="op">-&gt;</span>left  <span class="op">=</span> newNode;
+    <span class="kw">else</span>              parent<span class="op">-&gt;</span>right <span class="op">=</span> newNode;
+    <span class="fn">siftUp</span>(newNode, isMax);
+    <span class="kw">return</span> root;
+}
+
+<span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> <span class="fn">deleteHeap</span>(<span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> root, <span class="ty">int</span> val, <span class="ty">int</span> isMax) {
+    <span class="kw">if</span> (<span class="op">!</span>root) <span class="kw">return</span> NULL;
+    <span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> queue[<span class="num-lit">100</span>];
+    <span class="ty">int</span> head <span class="op">=</span> <span class="num-lit">0</span>, tail <span class="op">=</span> <span class="num-lit">0</span>;
+    queue[tail<span class="op">++</span>] <span class="op">=</span> root;
+    <span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> target <span class="op">=</span> NULL, <span class="op">*</span>deepest <span class="op">=</span> NULL;
+    <span class="kw">while</span> (head <span class="op">&lt;</span> tail) {
+        <span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> curr <span class="op">=</span> queue[head<span class="op">++</span>];
+        <span class="kw">if</span> (curr<span class="op">-&gt;</span>data <span class="op">==</span> val) target <span class="op">=</span> curr;
+        deepest <span class="op">=</span> curr;
+        <span class="kw">if</span> (curr<span class="op">-&gt;</span>left)  queue[tail<span class="op">++</span>] <span class="op">=</span> curr<span class="op">-&gt;</span>left;
+        <span class="kw">if</span> (curr<span class="op">-&gt;</span>right) queue[tail<span class="op">++</span>] <span class="op">=</span> curr<span class="op">-&gt;</span>right;
+    }
+    <span class="kw">if</span> (<span class="op">!</span>target) { <span class="fn">printf</span>(<span class="str">"Value %d not found.\n"</span>, val); <span class="kw">return</span> root; }
+    target<span class="op">-&gt;</span>data <span class="op">=</span> deepest<span class="op">-&gt;</span>data;
+    <span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> par <span class="op">=</span> deepest<span class="op">-&gt;</span>parent;
+    <span class="kw">if</span> (par) {
+        <span class="kw">if</span> (par<span class="op">-&gt;</span>left <span class="op">==</span> deepest)  par<span class="op">-&gt;</span>left  <span class="op">=</span> NULL;
+        <span class="kw">else</span>                        par<span class="op">-&gt;</span>right <span class="op">=</span> NULL;
+    } <span class="kw">else</span> { <span class="fn">free</span>(root); <span class="kw">return</span> NULL; }
+    <span class="fn">free</span>(deepest);
+    <span class="fn">siftUp</span>(target, isMax);
+    <span class="fn">heapifyDown</span>(target, isMax);
+    <span class="kw">return</span> root;
+}
+
+<span class="kw">void</span> <span class="fn">printLevelOrder</span>(<span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> root) {
+    <span class="kw">if</span> (<span class="op">!</span>root) <span class="kw">return</span>;
+    <span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> queue[<span class="num-lit">100</span>];
+    <span class="ty">int</span> head <span class="op">=</span> <span class="num-lit">0</span>, tail <span class="op">=</span> <span class="num-lit">0</span>;
+    queue[tail<span class="op">++</span>] <span class="op">=</span> root;
+    <span class="kw">while</span> (head <span class="op">&lt;</span> tail) {
+        <span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> curr <span class="op">=</span> queue[head<span class="op">++</span>];
+        <span class="fn">printf</span>(<span class="str">"%d "</span>, curr<span class="op">-&gt;</span>data);
+        <span class="kw">if</span> (curr<span class="op">-&gt;</span>left)  queue[tail<span class="op">++</span>] <span class="op">=</span> curr<span class="op">-&gt;</span>left;
+        <span class="kw">if</span> (curr<span class="op">-&gt;</span>right) queue[tail<span class="op">++</span>] <span class="op">=</span> curr<span class="op">-&gt;</span>right;
+    }
+    <span class="fn">printf</span>(<span class="str">"\n"</span>);
+}
+
+<span class="ty">int</span> <span class="fn">main</span>() {
+    <span class="ty">int</span> data[] <span class="op">=</span> {<span class="num-lit">10</span>, <span class="num-lit">16</span>, <span class="num-lit">4</span>, <span class="num-lit">25</span>, <span class="num-lit">54</span>, <span class="num-lit">12</span>, <span class="num-lit">8</span>, <span class="num-lit">3</span>, <span class="num-lit">20</span>, <span class="num-lit">32</span>};
+    <span class="ty">int</span> n <span class="op">=</span> <span class="kw">sizeof</span>(data) <span class="op">/</span> <span class="kw">sizeof</span>(data[<span class="num-lit">0</span>]);
+
+    <span class="kw">struct</span> <span class="ty">Node</span><span class="op">*</span> maxRoot <span class="op">=</span> NULL, <span class="op">*</span>minRoot <span class="op">=</span> NULL;
+    <span class="kw">for</span> (<span class="ty">int</span> i <span class="op">=</span> <span class="num-lit">0</span>; i <span class="op">&lt;</span> n; i++) maxRoot <span class="op">=</span> <span class="fn">insertHeap</span>(maxRoot, data[i], <span class="num-lit">1</span>);
+    <span class="kw">for</span> (<span class="ty">int</span> i <span class="op">=</span> <span class="num-lit">0</span>; i <span class="op">&lt;</span> n; i++) minRoot <span class="op">=</span> <span class="fn">insertHeap</span>(minRoot, data[i], <span class="num-lit">0</span>);
+
+    <span class="fn">printf</span>(<span class="str">"Max Heap : "</span>); <span class="fn">printLevelOrder</span>(maxRoot);
+    <span class="fn">printf</span>(<span class="str">"Min Heap : "</span>); <span class="fn">printLevelOrder</span>(minRoot);
+
+    <span class="fn">printf</span>(<span class="str">"\nInserting 100 into Max Heap...\n"</span>);
+    maxRoot <span class="op">=</span> <span class="fn">insertHeap</span>(maxRoot, <span class="num-lit">100</span>, <span class="num-lit">1</span>);
+    <span class="fn">printf</span>(<span class="str">"New Max Heap: "</span>); <span class="fn">printLevelOrder</span>(maxRoot);
+
+    <span class="fn">printf</span>(<span class="str">"\nDeleting 25 from Max Heap...\n"</span>);
+    maxRoot <span class="op">=</span> <span class="fn">deleteHeap</span>(maxRoot, <span class="num-lit">25</span>, <span class="num-lit">1</span>);
+    <span class="fn">printf</span>(<span class="str">"Max Heap after deletion: "</span>); <span class="fn">printLevelOrder</span>(maxRoot);
+
+    <span class="kw">return</span> <span class="num-lit">0</span>;
+}</pre>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       EXPERIMENT 10 — ALL IN ONE
+  ═══════════════════════════════════════════ -->
+  <div class="section-divider">
+    <span>Exp 10 — Combined</span>
+  </div>
+
+  <div class="exp-card" id="card-all">
+    <button class="exp-toggle" onclick="toggle('card-all')">
+      <div class="exp-num num-all">∞</div>
+      <div class="exp-info">
+        <div class="exp-title">Experiment 10 — All In One</div>
+        <div class="exp-subtitle">BFS + DFS + Topological Order in a single program</div>
+      </div>
+      <span class="exp-arrow">▾</span>
+    </button>
+    <div class="code-panel">
+      <div class="code-toolbar">
+        <span class="code-lang">C Language — Combined</span>
+        <button class="copy-btn" onclick="copyCode('code-all', this)">Copy</button>
+      </div>
+      <pre id="code-all"><span class="pp">#include &lt;stdio.h&gt;</span>
+<span class="pp">#include &lt;stdlib.h&gt;</span>
+<span class="pp">#define MAX 10</span>
+
+<span class="ty">int</span> adj[MAX][MAX];
+<span class="ty">int</span> visited[MAX];
+<span class="ty">int</span> n;
+
+<span class="cmt">// ── Queue for BFS ──</span>
+<span class="ty">int</span> queue[MAX], front <span class="op">=</span> <span class="op">-</span><span class="num-lit">1</span>, rear <span class="op">=</span> <span class="op">-</span><span class="num-lit">1</span>;
+
+<span class="kw">void</span> <span class="fn">enqueue</span>(<span class="ty">int</span> v) {
+    <span class="kw">if</span> (rear <span class="op">==</span> MAX <span class="op">-</span> <span class="num-lit">1</span>) <span class="kw">return</span>;
+    <span class="kw">if</span> (front <span class="op">==</span> <span class="op">-</span><span class="num-lit">1</span>) front <span class="op">=</span> <span class="num-lit">0</span>;
+    queue[<span class="op">++</span>rear] <span class="op">=</span> v;
+}
+
+<span class="ty">int</span> <span class="fn">dequeue</span>() {
+    <span class="kw">if</span> (front <span class="op">==</span> <span class="op">-</span><span class="num-lit">1</span> <span class="op">||</span> front <span class="op">&gt;</span> rear) <span class="kw">return</span> <span class="op">-</span><span class="num-lit">1</span>;
+    <span class="kw">return</span> queue[front<span class="op">++</span>];
+}
+
+<span class="cmt">// ── BFS ──</span>
+<span class="kw">void</span> <span class="fn">BFS</span>(<span class="ty">int</span> start) {
+    <span class="kw">for</span> (<span class="ty">int</span> i <span class="op">=</span> <span class="num-lit">0</span>; i <span class="op">&lt;</span> n; i++) visited[i] <span class="op">=</span> <span class="num-lit">0</span>;
+    <span class="fn">enqueue</span>(start);
+    visited[start] <span class="op">=</span> <span class="num-lit">1</span>;
+    <span class="fn">printf</span>(<span class="str">"BFS: "</span>);
+    <span class="kw">while</span> (front <span class="op">&lt;=</span> rear) {
+        <span class="ty">int</span> v <span class="op">=</span> <span class="fn">dequeue</span>();
+        <span class="fn">printf</span>(<span class="str">"%c "</span>, v <span class="op">+</span> <span class="str">'A'</span>);
+        <span class="kw">for</span> (<span class="ty">int</span> i <span class="op">=</span> <span class="num-lit">0</span>; i <span class="op">&lt;</span> n; i++) {
+            <span class="kw">if</span> (adj[v][i] <span class="op">==</span> <span class="num-lit">1</span> <span class="op">&amp;&amp;</span> <span class="op">!</span>visited[i]) {
+                <span class="fn">enqueue</span>(i);
+                visited[i] <span class="op">=</span> <span class="num-lit">1</span>;
+            }
+        }
+    }
+    <span class="fn">printf</span>(<span class="str">"\n"</span>);
+}
+
+<span class="cmt">// ── DFS ──</span>
+<span class="kw">void</span> <span class="fn">DFS</span>(<span class="ty">int</span> v) {
+    visited[v] <span class="op">=</span> <span class="num-lit">1</span>;
+    <span class="fn">printf</span>(<span class="str">"%c "</span>, v <span class="op">+</span> <span class="str">'A'</span>);
+    <span class="kw">for</span> (<span class="ty">int</span> i <span class="op">=</span> <span class="num-lit">0</span>; i <span class="op">&lt;</span> n; i++)
+        <span class="kw">if</span> (adj[v][i] <span class="op">==</span> <span class="num-lit">1</span> <span class="op">&amp;&amp;</span> <span class="op">!</span>visited[i])
+            <span class="fn">DFS</span>(i);
+}
+
+<span class="cmt">// ── Topological Sort (DFS-based) ──</span>
+<span class="ty">int</span> stack[MAX], top <span class="op">=</span> <span class="op">-</span><span class="num-lit">1</span>;
+
+<span class="kw">void</span> <span class="fn">topoDFS</span>(<span class="ty">int</span> v) {
+    visited[v] <span class="op">=</span> <span class="num-lit">1</span>;
+    <span class="kw">for</span> (<span class="ty">int</span> i <span class="op">=</span> <span class="num-lit">0</span>; i <span class="op">&lt;</span> n; i++)
+        <span class="kw">if</span> (adj[v][i] <span class="op">==</span> <span class="num-lit">1</span> <span class="op">&amp;&amp;</span> <span class="op">!</span>visited[i])
+            <span class="fn">topoDFS</span>(i);
+    stack[<span class="op">++</span>top] <span class="op">=</span> v;
+}
+
+<span class="kw">void</span> <span class="fn">topologicalSort</span>() {
+    <span class="kw">for</span> (<span class="ty">int</span> i <span class="op">=</span> <span class="num-lit">0</span>; i <span class="op">&lt;</span> n; i++) visited[i] <span class="op">=</span> <span class="num-lit">0</span>;
+    <span class="kw">for</span> (<span class="ty">int</span> i <span class="op">=</span> <span class="num-lit">0</span>; i <span class="op">&lt;</span> n; i++)
+        <span class="kw">if</span> (<span class="op">!</span>visited[i]) <span class="fn">topoDFS</span>(i);
+    <span class="fn">printf</span>(<span class="str">"Topological Order: "</span>);
+    <span class="kw">while</span> (top <span class="op">!=</span> <span class="op">-</span><span class="num-lit">1</span>)
+        <span class="fn">printf</span>(<span class="str">"%c "</span>, stack[top<span class="op">--</span>] <span class="op">+</span> <span class="str">'A'</span>);
+    <span class="fn">printf</span>(<span class="str">"\n"</span>);
+}
+
+<span class="ty">int</span> <span class="fn">main</span>() {
+    n <span class="op">=</span> <span class="num-lit">8</span>;
+    <span class="kw">for</span> (<span class="ty">int</span> i <span class="op">=</span> <span class="num-lit">0</span>; i <span class="op">&lt;</span> n; i++)
+        <span class="kw">for</span> (<span class="ty">int</span> j <span class="op">=</span> <span class="num-lit">0</span>; j <span class="op">&lt;</span> n; j++)
+            adj[i][j] <span class="op">=</span> <span class="num-lit">0</span>;
+
+    adj[<span class="num-lit">0</span>][<span class="num-lit">3</span>] <span class="op">=</span> <span class="num-lit">1</span>; adj[<span class="num-lit">0</span>][<span class="num-lit">2</span>] <span class="op">=</span> <span class="num-lit">1</span>; adj[<span class="num-lit">0</span>][<span class="num-lit">1</span>] <span class="op">=</span> <span class="num-lit">1</span>;
+    adj[<span class="num-lit">1</span>][<span class="num-lit">4</span>] <span class="op">=</span> <span class="num-lit">1</span>; adj[<span class="num-lit">1</span>][<span class="num-lit">2</span>] <span class="op">=</span> <span class="num-lit">1</span>; adj[<span class="num-lit">4</span>][<span class="num-lit">0</span>] <span class="op">=</span> <span class="num-lit">1</span>;
+    adj[<span class="num-lit">3</span>][<span class="num-lit">2</span>] <span class="op">=</span> <span class="num-lit">1</span>; adj[<span class="num-lit">3</span>][<span class="num-lit">5</span>] <span class="op">=</span> <span class="num-lit">1</span>; adj[<span class="num-lit">5</span>][<span class="num-lit">2</span>] <span class="op">=</span> <span class="num-lit">1</span>;
+    adj[<span class="num-lit">6</span>][<span class="num-lit">3</span>] <span class="op">=</span> <span class="num-lit">1</span>; adj[<span class="num-lit">6</span>][<span class="num-lit">5</span>] <span class="op">=</span> <span class="num-lit">1</span>; adj[<span class="num-lit">6</span>][<span class="num-lit">7</span>] <span class="op">=</span> <span class="num-lit">1</span>;
+    adj[<span class="num-lit">7</span>][<span class="num-lit">2</span>] <span class="op">=</span> <span class="num-lit">1</span>; adj[<span class="num-lit">2</span>][<span class="num-lit">4</span>] <span class="op">=</span> <span class="num-lit">1</span>;
+
+    BFS(<span class="num-lit">0</span>);
+
+    <span class="kw">for</span> (<span class="ty">int</span> i <span class="op">=</span> <span class="num-lit">0</span>; i <span class="op">&lt;</span> n; i++) visited[i] <span class="op">=</span> <span class="num-lit">0</span>;
+    front <span class="op">=</span> rear <span class="op">=</span> <span class="op">-</span><span class="num-lit">1</span>;
+    <span class="fn">printf</span>(<span class="str">"DFS: "</span>);
+    <span class="fn">DFS</span>(<span class="num-lit">0</span>);
+    <span class="fn">printf</span>(<span class="str">"\n"</span>);
+
+    <span class="fn">topologicalSort</span>();
+
+    <span class="kw">return</span> <span class="num-lit">0</span>;
+}</pre>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  Lab Experiments · Data Structures &amp; Algorithms · C Programming
+</footer>
+
+<script>
+  function toggle(id) {
+    const card = document.getElementById(id);
+    card.classList.toggle('open');
+  }
+
+  function switchTab(tab) {
+    const panels = ['bfs', 'dfs', 'topo'];
+    const tabs = document.querySelectorAll('.sub-tab');
+    panels.forEach(p => {
+      document.getElementById('panel-' + p).style.display = (p === tab) ? 'block' : 'none';
+    });
+    tabs.forEach((t, i) => {
+      t.classList.toggle('active', ['bfs','dfs','topo'][i] === tab);
+    });
+  }
+
+  function copyCode(id, btn) {
+    const pre = document.getElementById(id);
+    const text = pre.innerText || pre.textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = 'Copy';
+        btn.classList.remove('copied');
+      }, 2000);
+    });
+  }
+</script>
+
+</body>
+</html>
